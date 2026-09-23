@@ -1,0 +1,58 @@
+{
+  "name": "desktop-pet",
+  "version": "1.0.8",
+  "description": "A cute desktop pet for macOS and Windows — choose a black-and-white cat, a Shiba, or a Husky.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "author": "frankfu0714-cyber",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.frankfu.desktoppet",
+    "productName": "Desktop Pet",
+    "files": [
+      "main.js",
+      "index.html",
+      "food.html",
+      "package.json",
+      "tray.png",
+      "images/*_walk.png",
+      "images/*_sleep.png",
+      "images/*_eat.png",
+      "images/*_lift.png",
+      "images/*_idle.png",
+      "images/cat_*.png",
+      "sounds/**/*"
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": "universal"
+        }
+      ],
+      "category": "public.app-category.entertainment",
+      "icon": "build/icon.png",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": {
+        "teamId": "632H46CT74"
+      }
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    },
+    "publish": {
+      "provider": "github"
+    }
+  }
+}
