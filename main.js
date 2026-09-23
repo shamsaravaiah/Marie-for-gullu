@@ -23,6 +23,7 @@ let onboarded = false;
 let welcomeWin = null;
 const EAT_TIME = 6000;      // ms spent eating
 const MOUTH = 158;          // x of the pet's mouth within the window (facing right)
+const CAT_MOUTH = 142;      // cat eat art is mirrored; this is where her tongue lands
 const NECK_Y = 60;          // y of the pet's neck/scruff within the window (for carrying)
 
 // ---- pet state ----
@@ -219,11 +220,16 @@ function tick() {
   // ----- feeding overrides normal behavior -----
   if (foodActive) {
     const plateCenterX = plateX + PLATE / 2;
-    targetX = clampX(plateCenterX - MOUTH);
+    const mouth = currentPet === 'cat' ? CAT_MOUTH : MOUTH;
+    targetX = clampX(plateCenterX - mouth);
     const dx = targetX - petX;
     if (Math.abs(dx) <= 4) {
       facing = 'right';
-      if (mode !== 'eat') { mode = 'eat'; eatStart = now; }
+      if (mode !== 'eat') {
+        mode = 'eat';
+        eatStart = now;
+        if (win && !win.isDestroyed()) win.moveTop();
+      }
       else if (now - eatStart > EAT_TIME) { finishEat(); sendState(); return; }
     } else {
       mode = (now < happyUntil) ? 'wag' : (Math.abs(dx) > 260 ? 'run' : 'walk');

@@ -84,6 +84,11 @@
   @keyframes waddle { 0%,100% { transform: translateY(0) rotate(-2.5deg); } 50% { transform: translateY(-6px) rotate(2.5deg); } }
   .state-eat .sprite, .state-eat .sheet { animation: eatdip .6s ease-in-out infinite; transform-origin: 70% 100%; }
   @keyframes eatdip { 0%,100% { transform: rotate(9deg) translateY(2px); } 50% { transform: rotate(13deg) translateY(5px); } }
+  /* Cat eat art faces left. Mirror it while she faces the bowl so her tongue lands in the food. */
+  .pet-cat.state-eat.facing-right .flip { transform: scaleX(-1); }
+  .pet-cat.state-eat.facing-left .flip { transform: none; }
+  .pet-cat.state-eat .sheet { animation: eatchew .5s ease-in-out infinite; transform-origin: 34% 100%; }
+  @keyframes eatchew { 0%,100% { transform: translateY(0); } 50% { transform: translateY(2px); } }
 
   /* ---- sprite-sheet mode (real frame animation) ---- */
   .sheet {
@@ -109,7 +114,7 @@
 </style>
 </head>
 <body>
-  <div id="stage" class="state-idle facing-right">
+  <div id="stage" class="state-idle facing-right pet-cat">
     <div id="pethost"></div>
     <div id="zzz">z</div>
     <div id="heart">💗</div>
@@ -291,6 +296,8 @@ function applyAnim(){
 function render(pet){
   if(pet===currentPet) return;
   currentPet=pet;
+  ['cat','shiba','husky','fortune'].forEach(p => stage.classList.remove('pet-'+p));
+  stage.classList.add('pet-'+pet);
   const cfg = SHEETS[pet];
   if(!cfg){ trySingle(pet); return; }
   // Preload every defined animation so applyAnim knows which exist.
@@ -379,16 +386,24 @@ function onModeSound(mode){
   else { stopHungry(); stopPurr(); }
 }
 
-function scheduleMeow(){
-  // Uneven gaps of several minutes, so a meow is a surprise rather than a beat.
-  const wait = (5 + Math.random() * 10) * 60 * 1000;
+function meowNow(){
+  if (currentPet !== 'cat' || currentMode === 'hungry') return;
+  const resumePurr = currentMode === 'sleep';
+  if (resumePurr) stopPurr();
+  playPool('poke');
+  if (resumePurr && meowAudio) {
+    meowAudio.onended = () => { if (currentMode === 'sleep') playPurr(); };
+  }
+}
+function scheduleMeow(first){
+  // First meow is 5 minutes after launch. Later ones stay uneven so they feel like a surprise.
+  const wait = first ? 5 * 60 * 1000 : (5 + Math.random() * 10) * 60 * 1000;
   setTimeout(() => {
-    const quiet = currentMode === 'hungry' || currentMode === 'sleep';
-    if (currentPet === 'cat' && !quiet) playPool('poke');
-    scheduleMeow();
+    meowNow();
+    scheduleMeow(false);
   }, wait);
 }
-scheduleMeow();
+scheduleMeow(true);
 
 function setMode(mode){
   const prev = currentMode;
