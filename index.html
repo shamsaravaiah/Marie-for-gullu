@@ -211,17 +211,18 @@ let currentPet = null;
 // Per-pet, per-state sprite sheets (each a horizontal frame strip).
 const SHEETS = {
   cat: {
-    walk:     { file: 'images/cat_walk.png',     frames: 4, dur: 0.48 },
-    wag:      { file: 'images/cat_wag.png',      frames: 4, dur: 0.42 },
-    run:      { file: 'images/cat_run.png',      frames: 4, dur: 0.32 },
-    sleep:    { file: 'images/cat_sleep.png',    frames: 4, dur: 2.2, front: true },
-    lift:     { file: 'images/cat_lift.png',     frames: 4, dur: 0.7 },
-    eat:      { file: 'images/cat_eat.png',      frames: 4, dur: 0.7 },
-    groom:    { file: 'images/cat_groom.png',    frames: 4, dur: 1.1 },
-    hungry:   { file: 'images/cat_hungry.png',   frames: 4, dur: 0.9, front: true },
-    rollover: { file: 'images/cat_rollover.png', frames: 4, dur: 1.2 },
-    biscuit:  { file: 'images/cat_biscuit.png',  frames: 4, dur: 0.8, front: true },
-    idle:     { file: 'images/cat_idle.png',     frames: 4, dur: 1.8, front: true },
+    walk:     { file: 'images/cat_walk.png',     frames: 8, dur: 1.6 },
+    wag:      { file: 'images/cat_wag.png',      frames: 8, dur: 1.5 },
+    run:      { file: 'images/cat_run.png',      frames: 8, dur: 0.9 },
+    sleep:    { file: 'images/cat_sleep.png',    frames: 8, dur: 3.6, front: true },
+    lift:     { file: 'images/cat_lift.png',     frames: 4, dur: 1.4 },
+    eat:      { file: 'images/cat_eat.png',      frames: 8, dur: 1.8 },
+    groom:    { file: 'images/cat_groom.png',    frames: 8, dur: 2.4 },
+    hungry:   { file: 'images/cat_hungry.png',   frames: 4, dur: 2.2, front: true },
+    rollover: { file: 'images/cat_rollover.png', frames: 4, dur: 2.2 },
+    biscuit:  { file: 'images/cat_biscuit.png',  frames: 4, dur: 1.8, front: true },
+    play:     { file: 'images/cat_play.png',     frames: 8, dur: 1.6 },
+    idle:     { file: 'images/cat_idle.png',     frames: 8, dur: 3.2, front: true },
   },
   shiba: {
     walk:  { file: 'images/shiba_walk.png',  frames: 25, dur: 1.4 },
@@ -271,6 +272,7 @@ function applyAnim(){
   else if (currentMode === 'hungry') use('hungry', 'loop');
   else if (currentMode === 'groom') use('groom', 'loop');
   else if (currentMode === 'biscuit') use('biscuit', 'loop');
+  else if (currentMode === 'play') use('play', 'loop');
   else if (currentMode === 'rollover') use('rollover', 'once');
   else if (currentMode === 'run') use('run', 'loop');
   else if (currentMode === 'wag') use('wag', 'loop');
@@ -307,9 +309,10 @@ function render(pet){
   probe.onerror = () => trySingle(pet);
   probe.src = base.file;
 }
-const ACTION_MODES = ['idle','walk','wag','run','sleep','eat','groom','hungry','rollover','biscuit'];
+const ACTION_MODES = ['idle','walk','wag','run','sleep','eat','groom','hungry','rollover','biscuit','play'];
 
-const HUNGRY_SOUND = encodeURI('sounds/Hungry cat - sounds.mp3');
+const HUNGRY_SOUNDS = [1, 2, 3, 4, 5].map(i => `sounds/clips/hungry-0${i}.mp3`);
+const PURR_SOUND = encodeURI('sounds/Cat Purr - Sound Effect for editing.mp3');
 const MEOWS = Array.from({length:12}, (_,i) => `sounds/clips/meow-${String(i+1).padStart(2,'0')}.mp3`);
 const SOUND_POOL = {
   eat:      [0, 1, 2, 5],
@@ -322,6 +325,8 @@ const SOUND_POOL = {
 };
 let meowAudio = null;
 let hungryAudio = null;
+let purrAudio = null;
+let hungryIndex = 0;
 
 function playFile(src, volume){
   const a = new Audio(src);
@@ -338,20 +343,52 @@ function playPool(action){
   meowAudio = playFile(src, 0.8);
 }
 function playHungry(){
-  if (currentPet !== 'cat') return;
+  if (currentPet !== 'cat' || currentMode !== 'hungry') return;
   if (hungryAudio && !hungryAudio.ended && !hungryAudio.paused) return;
-  hungryAudio = playFile(HUNGRY_SOUND, 0.9);
+  const src = HUNGRY_SOUNDS[hungryIndex % HUNGRY_SOUNDS.length];
+  hungryIndex = (hungryIndex + 1) % HUNGRY_SOUNDS.length;
+  hungryAudio = playFile(src, 0.9);
+  hungryAudio.onended = () => {
+    hungryAudio = null;
+    if (currentMode === 'hungry') playHungry();
+  };
 }
 function stopHungry(){
-  if (hungryAudio) { hungryAudio.pause(); hungryAudio = null; }
+  if (!hungryAudio) return;
+  hungryAudio.onended = null;
+  hungryAudio.pause();
+  hungryAudio = null;
+}
+function playPurr(){
+  if (currentPet !== 'cat' || currentMode !== 'sleep') return;
+  if (purrAudio && !purrAudio.paused) return;
+  purrAudio = new Audio(PURR_SOUND);
+  purrAudio.loop = true;
+  purrAudio.volume = 0.4;
+  purrAudio.play().catch(() => {});
+}
+function stopPurr(){
+  if (!purrAudio) return;
+  purrAudio.pause();
+  purrAudio = null;
 }
 function onModeSound(mode){
-  if (currentPet !== 'cat') { stopHungry(); return; }
-  if (mode === 'hungry') playHungry();
-  else stopHungry();
-  if (SOUND_POOL[mode]) playPool(mode);
+  if (currentPet !== 'cat') { stopHungry(); stopPurr(); return; }
+  if (mode === 'hungry') { stopPurr(); hungryIndex = 0; playHungry(); }
+  else if (mode === 'sleep') { stopHungry(); playPurr(); }
+  else { stopHungry(); stopPurr(); }
 }
-setInterval(() => { if (currentMode === 'hungry') playHungry(); }, 16000);
+
+function scheduleMeow(){
+  // Uneven gaps of several minutes, so a meow is a surprise rather than a beat.
+  const wait = (5 + Math.random() * 10) * 60 * 1000;
+  setTimeout(() => {
+    const quiet = currentMode === 'hungry' || currentMode === 'sleep';
+    if (currentPet === 'cat' && !quiet) playPool('poke');
+    scheduleMeow();
+  }, wait);
+}
+scheduleMeow();
 
 function setMode(mode){
   const prev = currentMode;
@@ -363,7 +400,13 @@ function setMode(mode){
 }
 function setFacing(f){ stage.classList.remove('facing-left','facing-right'); stage.classList.add('facing-'+f); }
 
-ipcRenderer.on('state', (_e,{mode,facing,pet}) => { render(pet); setMode(mode); setFacing(facing); });
+ipcRenderer.on('state', (_e,{mode,facing,pet}) => {
+  const petChanged = pet !== currentPet;
+  render(pet);
+  setMode(mode);
+  setFacing(facing);
+  if (petChanged) onModeSound(currentMode);
+});
 render('cat');
 
 /* ============ interaction ============ */
@@ -382,7 +425,7 @@ window.addEventListener('mouseup', ()=>{
   down=false;
   if(lifting){ lifting=false; lifted=false; stage.classList.remove('lifted'); applyAnim(); }
   ipcRenderer.send('drag-end');
-  if(moved<5){ ipcRenderer.send('poke'); playPool('poke'); stage.classList.add('happy'); setTimeout(()=>stage.classList.remove('happy'),750); }
+  if(moved<5){ ipcRenderer.send('poke'); stage.classList.add('happy'); setTimeout(()=>stage.classList.remove('happy'),750); }
 });
 stage.addEventListener('contextmenu', (e)=>{ e.preventDefault(); ipcRenderer.send('context-menu'); });
 </script>

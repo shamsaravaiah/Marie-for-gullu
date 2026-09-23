@@ -19,7 +19,10 @@
     "files": [
       "main.js",
       "index.html",
+      "welcome.html",
       "food.html",
+      "ball.html",
+      "butterfly.html",
       "package.json",
       "tray.png",
       "images/*_walk.png",
@@ -28,6 +31,7 @@
       "images/*_lift.png",
       "images/*_idle.png",
       "images/cat_*.png",
+      "images/welcome_*.png",
       "sounds/**/*"
     ],
     "mac": {
